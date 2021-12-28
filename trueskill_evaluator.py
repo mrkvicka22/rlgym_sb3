@@ -28,7 +28,7 @@ def get_policies():
 
 def get_opponent_in_range(ratings: dict, min_mu, max_mu):
     # Get MUs
-    mus = np.asarray([ratings[i]["rating"].mu for i in range(len(ratings)-1)])
+    mus = np.asarray([ratings[i]["rating"].mu for i in range(len(ratings))])
 
     # Get opponents in rating range
     op_indexes = np.where((mus >= min_mu) & (mus <= max_mu))[0]
@@ -63,7 +63,6 @@ def initialize_ratings(reset_ratings: bool = False):
 team_size = 2
 max_steps = 3000
 no_touch_steps = 500
-action_trans = np.array([-1, -1, -1, -1, -1, 0, 0, 0])
 env = rlgym.make(team_size=team_size, self_play=True, use_injector=True,
                  obs_builder=AdvancedObs(),
                  state_setter=DefaultState(),
@@ -72,24 +71,22 @@ env = rlgym.make(team_size=team_size, self_play=True, use_injector=True,
                  action_parser=KBMAction())
 # agent = PPOActor(state_space=env.observation_space.shape[0], action_categoricals=5, action_bernoullis=3)
 # opponent = PPOActor(state_space=env.observation_space.shape[0], action_categoricals=5, action_bernoullis=3)
-
-while True:
+agent_idx = 1
+while agent_idx < len(get_policies()):
     # Get reference Mu -> Returns last MU and last index
     ratings = initialize_ratings()
-    agent_idx = -1
-    # initial_mu = float(redis.lindex(Keys.OP_MUS, -1))
-    initial_mu = ratings[-1]["rating"].mu
+    initial_mu = ratings[agent_idx]["rating"].mu
     agent_rating = Rating(mu=initial_mu)
 
     # TODO remove plotting
     mus = [agent_rating.mu]
 
-    agent = PPO.load('policy/'+get_policies()[-1])
+    agent = PPO.load('policy/'+get_policies()[agent_idx])
 
     # Loop until sigma = 1 or for 200 matches
     matches = 0
     wins = 0
-    while matches < 200 and agent_rating.sigma > 1:
+    while matches < 100 and agent_rating.sigma > 1:
         matches += 1
         # Get random opponent with mu in range(agent.mu - beta, agent.mu + beta)
         if agent_rating.sigma > 2:
@@ -98,7 +95,7 @@ while True:
         else:
             range_mu = agent_rating.mu
 
-        opponent_listitem = get_opponent_in_range(ratings, range_mu - 2 * ts.beta, range_mu + 2 * ts.beta)
+        opponent_listitem = get_opponent_in_range(ratings[:agent_idx], range_mu - 2 * ts.beta, range_mu + 2 * ts.beta)
         opponent = PPO.load('policy/'+opponent_listitem["name"])
         op_rating = opponent_listitem["rating"]
 
@@ -152,4 +149,5 @@ while True:
     print('Agent {} rating - matches: {} - wins: {} - mu: {} - sigma: {}'.format(agent_idx, matches, wins,
                                                                                  agent_rating.mu, agent_rating.sigma))
     ratings[agent_idx]["rating"] = agent_rating
+    agent_idx+=1
 env.close()

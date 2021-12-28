@@ -67,7 +67,7 @@ if __name__ == '__main__':  # Required for multiprocessing
     )
     callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="policy", name_prefix="rl_model")
     if load_model:
-        model = PPO.load("policy/rl_model_77000000_steps.zip", env, custom_objects=dict(n_envs=n_instances*2*team_size))
+        model = PPO.load("policy/rl_model_130000000_steps.zip", env, custom_objects=dict(n_envs=n_instances*2*team_size))
         env.reset()
         model.learn(100_000_000_000, callback=callback, reset_num_timesteps=False)
     else:
