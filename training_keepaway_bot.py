@@ -18,7 +18,9 @@ from custom_state_setters.proximity_random_setter import ProximityRandomState
 
 if __name__ == '__main__':  # Required for multiprocessing
     frame_skip = 8  # Number of ticks to repeat an action
-    half_life_seconds = 5  # Easier to conceptualize, after this many seconds the reward discount is 0.5
+    half_life_seconds = 8  # Easier to conceptualize, after this many seconds the reward discount is 0.5
+    n_instances = 4
+    team_size = 2
 
     fps = 120 / frame_skip
     gamma = np.exp(np.log(0.5) / (fps * half_life_seconds))  # Quick mafs
@@ -31,7 +33,7 @@ if __name__ == '__main__':  # Required for multiprocessing
 
     def get_match():  # Need to use a function so that each instance can call it and produce their own objects
         return Match(
-            team_size=3,  # 3v3 to get as many agents going as possible, will make results more noisy
+            team_size=team_size,  # 3v3 to get as many agents going as possible, will make results more noisy
             tick_skip=frame_skip,
             reward_function=reward_func,  # Simple reward since example code
             self_play=True,
@@ -41,8 +43,8 @@ if __name__ == '__main__':  # Required for multiprocessing
             action_parser=KBMAction()  # Discrete > Continuous don't @ me
         )
 
-
-    env = SB3MultipleInstanceEnv(get_match, 2)  # Start 2 instances, waiting 60 seconds between each
+    load_model = input("[L]oad/[T]rain").lower()=="l"
+    env = SB3MultipleInstanceEnv(get_match, n_instances)  # Start 2 instances, waiting 60 seconds between each
     env = VecCheckNan(env)  # Optional
     env = VecMonitor(env)  # Recommended, logs mean reward and ep_len to Tensorboard
     env = VecNormalize(env, norm_obs=False, gamma=gamma)  # Highly recommended, normalizes rewards
@@ -57,25 +59,16 @@ if __name__ == '__main__':  # Required for multiprocessing
         vf_coef=1.,  # From PPO Atari
         gamma=gamma,  # Gamma as calculated using half-life
         verbose=3,  # Print out all the info as we're going
-        batch_size=4096 * 4,  # Batch size as high as possible within reason
-        n_steps=4096 * 4,  # Number of steps to perform before optimizing network
+        batch_size=4096 * 8,  # Batch size as high as possible within reason
+        n_steps=4096 * 8,  # Number of steps to perform before optimizing network
         tensorboard_log="out/logs",  # `tensorboard --logdir out/logs` in terminal to see graphs
         device="auto",  # Uses GPU if available
         policy_kwargs={}
     )
-
-    # Save model every so often
-    # Divide by num_envs (number of agents) because callback only increments every time all agents have taken a step
-    # This saves to specified folder with a specified name
-    callback = CheckpointCallback(round(1_000_000 / env.num_envs), save_path="policy", name_prefix="rl_model")
-
-    model.learn(100_000_000, callback=callback)
-
-    # Now, if one wants to load a trained model from a checkpoint, use this function
-    # This will contain all the attributes of the original model
-    # Any attribute can be overwritten by using the custom_objects parameter,
-    # which includes n_envs (number of agents), which has to be overwritten to use a different amount
-    model = PPO.load("policy/rl_model_1000002_steps.zip", env, custom_objects=dict(n_envs=env.num_envs))
-    env.reset()  # Important when loading models, SB3 does not do this for you
-    # Use reset_num_timesteps=False to keep going with same logger/checkpoints
-    model.learn(100_000_000, callback=callback, reset_num_timesteps=False)
+    callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="policy", name_prefix="rl_model")
+    if load_model:
+        model = PPO.load("policy/rl_model_77000000_steps.zip", env, custom_objects=dict(n_envs=n_instances*2*team_size))
+        env.reset()
+        model.learn(100_000_000_000, callback=callback, reset_num_timesteps=False)
+    else:
+        model.learn(100_000_000_000, callback=callback)
