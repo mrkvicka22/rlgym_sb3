@@ -11,7 +11,7 @@ from rlgym.utils.reward_functions.common_rewards import VelocityBallToGoalReward
 from rlgym.utils.reward_functions.combined_reward import CombinedReward
 from custom_rewards.keepaway_rewards import KeepAwayReward
 from rlgym.utils.state_setters import DefaultState
-from rlgym.utils.terminal_conditions.common_conditions import TimeoutCondition, GoalScoredCondition
+from rlgym.utils.terminal_conditions.common_conditions import TimeoutCondition, GoalScoredCondition, NoTouchTimeoutCondition
 from rlgym_tools.sb3_utils import SB3MultipleInstanceEnv
 from rlgym_tools.extra_action_parsers.kbm_act import KBMAction
 from custom_state_setters.proximity_random_setter import ProximityRandomState
@@ -37,7 +37,7 @@ if __name__ == '__main__':  # Required for multiprocessing
             tick_skip=frame_skip,
             reward_function=reward_func,  # Simple reward since example code
             self_play=True,
-            terminal_conditions=[TimeoutCondition(round(fps * 30)), GoalScoredCondition()],  # Some basic terminals
+            terminal_conditions=[TimeoutCondition(round(fps * 60)),NoTouchTimeoutCondition(round(fps * 15)), GoalScoredCondition()],  # Some basic terminals
             obs_builder=AdvancedObs(),  # Not that advanced, good default
             state_setter=ProximityRandomState(),  # Resets to kickoff position
             action_parser=KBMAction()  # Discrete > Continuous don't @ me

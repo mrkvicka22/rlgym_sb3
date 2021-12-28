@@ -17,6 +17,10 @@ from rlgym_tools.extra_action_parsers.kbm_act import KBMAction
 
 # Disable cpu parallelization
 torch.set_num_threads(1)
+model_directory = 'policy'
+matches_to_play = 100
+best_of = 9
+sigma_threshold = 1
 
 # Setup TrueSkill env
 setup(draw_probability=0.01)
@@ -24,7 +28,7 @@ ts = global_env()
 
 
 def get_policies():
-    return list(sorted(os.listdir("policy"), key=lambda x: int(x.split("_")[2])))
+    return list(sorted(os.listdir(model_directory), key=lambda x: int(x.split("_")[2])))
 
 def get_opponent_in_range(ratings: dict, min_mu, max_mu):
     # Get MUs
@@ -81,12 +85,12 @@ while agent_idx < len(get_policies()):
     # TODO remove plotting
     mus = [agent_rating.mu]
 
-    agent = PPO.load('policy/'+get_policies()[agent_idx])
+    agent = PPO.load(os.path.join(model_directory,get_policies()[agent_idx]))
 
     # Loop until sigma = 1 or for 200 matches
     matches = 0
     wins = 0
-    while matches < 100 and agent_rating.sigma > 1:
+    while matches < matches_to_play and agent_rating.sigma > sigma_threshold:
         matches += 1
         # Get random opponent with mu in range(agent.mu - beta, agent.mu + beta)
         if agent_rating.sigma > 2:
@@ -96,14 +100,14 @@ while agent_idx < len(get_policies()):
             range_mu = agent_rating.mu
 
         opponent_listitem = get_opponent_in_range(ratings[:agent_idx], range_mu - 2 * ts.beta, range_mu + 2 * ts.beta)
-        opponent = PPO.load('policy/'+opponent_listitem["name"])
+        opponent = PPO.load(os.path.join(model_directory,opponent_listitem["name"]))
         op_rating = opponent_listitem["rating"]
 
         # Play a best of 9 match
         score_diff = 0
         agent_score = 0
         op_score = 0
-        for i in range(9):
+        for i in range(best_of):
             # Play episode
             obs = env.reset()
             done = False
