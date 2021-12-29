@@ -24,7 +24,9 @@ if __name__ == '__main__':  # Required for multiprocessing
     team_size = 2
 
     fps = 120 / frame_skip
-    gamma = np.exp(np.log(0.5) / (fps * half_life_seconds))  # Quick mafs
+    proportion_after = 0.1
+    proportion_life_seconds = 15
+    gamma = proportion_after**(1/(fps*proportion_life_seconds))
     print(f"fps={fps}, gamma={gamma})")
 
     reward_func = CombinedReward(

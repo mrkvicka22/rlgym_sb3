@@ -19,12 +19,6 @@ from rlgym_tools.extra_obs.advanced_stacker import AdvancedStacker
 # Disable cpu parallelization
 torch.set_num_threads(1)
 
-model_directory = 'policy'  # choose the directory in which you store your policies
-max_matches_to_play = 10  # how many matches do you want the evaluator to you use in order to determine the skill
-best_of = 9  # how many mini-matches (first to score a goal or reach timeout) do you want to have in each match
-sigma_threshold = 1  # the threshold at which the evaluation of agent is stopped as the mmr does not move enough
-order_function = lambda x: int(x.split("_")[2])  # this is a function that orders your models based on version.
-
 # Setup TrueSkill env
 setup(draw_probability=0.01)
 ts = global_env()
@@ -34,13 +28,15 @@ def save_ratings(ratings_database):
     with open("policy_ratings", "wb") as f:
         pickle.dump(ratings_database, f)
 
-def get_policies(order_func):
-    return list(sorted(os.listdir(model_directory),key=order_func))  # TODO: This is not ideal, figure out something better.
+
+def get_policies(order_func, path):
+    return list(sorted(os.listdir(path), key=order_func))
 
 
 def get_opponent_in_range(ratings_database: dict, min_mu, max_mu):
     # Get MUs
-    all_mus = np.asarray([ratings_database['opponents'][i]["rating"].mu for i in range(len(ratings_database['opponents']))])
+    all_mus = np.asarray(
+        [ratings_database['opponents'][i]["rating"].mu for i in range(len(ratings_database['opponents']))])
 
     # Get opponents in rating range
     op_indexes = np.where((all_mus >= min_mu) & (all_mus <= max_mu))[0]
@@ -58,41 +54,47 @@ def get_opponent_in_range(ratings_database: dict, min_mu, max_mu):
 
 
 # Initialize rating list if necessary (length == 0)
-def initialize_ratings(order_func, reset_ratings: bool = False):
+def initialize_ratings(order_func, path, reset_ratings: bool = False):
     try:
         with open("policy_ratings", "rb") as f:
             ratings_database = pickle.load(f)
     except FileNotFoundError:
         ratings_database = {'agents': [], 'opponents': []}
-        policies = get_policies(order_func)
+        policies = get_policies(order_func, path)
         for model in policies[1:]:
             ratings_database['agents'].append({"name": model, "rating": Rating()})
         ratings_database['opponents'].append({"name": policies[0], "rating": Rating()})
     if reset_ratings:
         ratings_database = {'agents': [], 'opponents': []}
-        policies = get_policies(order_func)
+        policies = get_policies(order_func, path)
         for model in policies[1:]:
             ratings_database['agents'].append({"name": model, "rating": Rating()})
         ratings_database['opponents'].append({"name": policies[0], "rating": Rating()})
     return ratings_database
 
+
 if __name__ == '__main__':
+    model_directory = 'policy'  # choose the directory in which you store your policies
+    max_matches_to_play = 10  # how many matches do you want the evaluator to you use in order to determine the skill
+    best_of = 9  # how many mini-matches (first to score a goal or reach timeout) do you want to have in each match
+    sigma_threshold = 1  # the threshold at which the evaluation of agent is stopped as the mmr does not move enough
+    order_function = lambda x: int(x.split("_")[2])  # this is a function that orders your models based on version.
 
     # Initialize rlgym
-    team_size = 1
+    team_size = 2
     max_steps = 3000
     no_touch_steps = 500
     env = rlgym.make(team_size=team_size, self_play=True, use_injector=True,
-                     obs_builder=AdvancedStacker(30),
+                     obs_builder=AdvancedObs(),
                      state_setter=DefaultState(),
                      terminal_conditions=[TimeoutCondition(max_steps), GoalScoredCondition(),
                                           NoTouchTimeoutCondition(no_touch_steps)],
-                     action_parser=DiscreteAction()
+                     action_parser=KBMAction()
                      )
 
     while True:
         # Get reference Mu -> Returns last MU and last index
-        ratings = initialize_ratings(order_func=order_function)
+        ratings = initialize_ratings(order_function, model_directory)
         initial_mu = ratings['opponents'][-1]["rating"].mu
         agent_rating = Rating(mu=initial_mu)
 
@@ -159,9 +161,11 @@ if __name__ == '__main__':
             print(agent_rating, score_diff, opponent_listitem['rating'].mu)
 
         # Put agent.mu and agent.sigma in redis
-        print('Agent {} rating - matches: {} - wins: {} - mu: {} - sigma: {}'.format(ratings['agents'][0]["name"], matches,
+        print('Agent {} rating - matches: {} - wins: {} - mu: {} - sigma: {}'.format(ratings['agents'][0]["name"],
+                                                                                     matches,
                                                                                      wins,
-                                                                                     agent_rating.mu, agent_rating.sigma))
+                                                                                     agent_rating.mu,
+                                                                                     agent_rating.sigma))
         ratings['agents'][0]["rating"] = agent_rating
         ratings['opponents'].append(ratings['agents'][0])
         ratings['agents'].pop(0)
