@@ -15,7 +15,7 @@ ROLL_MAX = np.pi
 
 class ProximityRandomState(StateSetter):
 
-    def __init__(self, ball_rand_speed: bool = False, cars_rand_speed: bool = False, cars_on_ground: bool = True):
+    def __init__(self, ball_rand_speed: bool = False, cars_rand_speed: bool = False, cars_on_ground: bool = True, radius: float=500):
         """
         RandomState constructor.
 
@@ -27,6 +27,7 @@ class ProximityRandomState(StateSetter):
         self.ball_rand_speed = ball_rand_speed
         self.cars_rand_speed = cars_rand_speed
         self.cars_on_ground = cars_on_ground
+        self.radius = radius
 
     def reset(self, state_wrapper: StateWrapper):
         """
@@ -61,7 +62,7 @@ class ProximityRandomState(StateSetter):
         for car in state_wrapper.cars:
             # set random position and rotation for all cars based on pre-determined ranges
 
-            car.set_pos(*[v+b for v,b in zip(rand_vec3(500),state_wrapper.ball.position)])
+            car.set_pos(*[v+b for v,b in zip(rand_vec3(self.radius),state_wrapper.ball.position)])
             car.set_rot(rand.random() * PITCH_MAX - PITCH_MAX/2, rand.random()
                         * YAW_MAX - YAW_MAX/2, rand.random() * ROLL_MAX - ROLL_MAX/2)
 

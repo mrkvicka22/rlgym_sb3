@@ -1,4 +1,5 @@
 import numpy as np
+import torch.optim
 from rlgym.envs import Match
 from rlgym.utils.action_parsers import DiscreteAction
 from stable_baselines3 import PPO
@@ -18,7 +19,7 @@ from custom_state_setters.proximity_random_setter import ProximityRandomState
 
 if __name__ == '__main__':  # Required for multiprocessing
     frame_skip = 8  # Number of ticks to repeat an action
-    half_life_seconds = 8  # Easier to conceptualize, after this many seconds the reward discount is 0.5
+    half_life_seconds = 10  # Easier to conceptualize, after this many seconds the reward discount is 0.5
     n_instances = 4
     team_size = 2
 
@@ -39,7 +40,7 @@ if __name__ == '__main__':  # Required for multiprocessing
             self_play=True,
             terminal_conditions=[TimeoutCondition(round(fps * 60)),NoTouchTimeoutCondition(round(fps * 15)), GoalScoredCondition()],  # Some basic terminals
             obs_builder=AdvancedObs(),  # Not that advanced, good default
-            state_setter=ProximityRandomState(),  # Resets to kickoff position
+            state_setter=ProximityRandomState(cars_on_ground=False, radius=750),  # Resets to kickoff position
             action_parser=KBMAction()  # Discrete > Continuous don't @ me
         )
 
@@ -63,11 +64,11 @@ if __name__ == '__main__':  # Required for multiprocessing
         n_steps=4096 * 8,  # Number of steps to perform before optimizing network
         tensorboard_log="out/logs",  # `tensorboard --logdir out/logs` in terminal to see graphs
         device="auto",  # Uses GPU if available
-        policy_kwargs={}
+        policy_kwargs={'net_arch': [dict(pi=[256,256,256,256,256], vf=[256,256,256,256,256])], 'optimizer_class':torch.optim.SGD}
     )
     callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="policy", name_prefix="rl_model")
     if load_model:
-        model = PPO.load("policy/rl_model_130000000_steps.zip", env, custom_objects=dict(n_envs=n_instances*2*team_size))
+        model = PPO.load("policy/rl_model_200000000_steps.zip", env, custom_objects=dict(n_envs=n_instances*2*team_size))
         env.reset()
         model.learn(100_000_000_000, callback=callback, reset_num_timesteps=False)
     else:
