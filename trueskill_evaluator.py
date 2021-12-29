@@ -25,9 +25,6 @@ best_of = 9  # how many mini-matches (first to score a goal or reach timeout) do
 sigma_threshold = 1  # the threshold at which the evaluation of agent is stopped as the mmr does not move enough
 order_function = lambda x: int(x.split("_")[2])  # this is a function that orders your models based on version.
 
-cta_order_function = lambda x: int(x.split("_")[1])
-order_function = cta_order_function
-
 # Setup TrueSkill env
 setup(draw_probability=0.01)
 ts = global_env()
@@ -99,8 +96,6 @@ if __name__ == '__main__':
         initial_mu = ratings['opponents'][-1]["rating"].mu
         agent_rating = Rating(mu=initial_mu)
 
-        # TODO remove plotting
-        mus = [agent_rating.mu]
         if len(ratings['agents']) == 0:
             print("No new model to evaluate, sleeping 10 minutes")
             sleep(600)
@@ -133,7 +128,7 @@ if __name__ == '__main__':
                 done = False
 
                 while not done:
-                    # TODO: make this work with arbitrary agents. Not always the same agents one the same team
+                    # TODO: make this work with arbitrary agents. Not always the same agents on the same team
                     # TODO: Predict in batches instead of for loops
                     surr_actions = []
                     for j in range(team_size):
@@ -161,14 +156,7 @@ if __name__ == '__main__':
             else:
                 _, agent_rating = rate_1vs1(op_rating, agent_rating, drawn=(score_diff == 0))
 
-            # TODO remove plotting
             print(agent_rating, score_diff, opponent_listitem['rating'].mu)
-            mus.append(agent_rating.mu)
-
-        # TODO remove plotting
-        plt.plot(mus)
-        plt.ylabel('mu')
-        plt.show()
 
         # Put agent.mu and agent.sigma in redis
         print('Agent {} rating - matches: {} - wins: {} - mu: {} - sigma: {}'.format(ratings['agents'][0]["name"], matches,
