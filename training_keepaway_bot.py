@@ -11,17 +11,18 @@ from rlgym.utils.obs_builders import AdvancedObs
 from rlgym.utils.reward_functions.common_rewards import VelocityBallToGoalReward, EventReward, VelocityPlayerToBallReward
 from rlgym.utils.reward_functions.combined_reward import CombinedReward
 from custom_rewards.keepaway_rewards import KeepAwayReward
-from rlgym.utils.state_setters import DefaultState
+from rlgym.utils.state_setters import DefaultState, RandomState
 from rlgym.utils.terminal_conditions.common_conditions import TimeoutCondition, GoalScoredCondition, NoTouchTimeoutCondition
 from rlgym_tools.sb3_utils import SB3MultipleInstanceEnv
 from rlgym_tools.extra_action_parsers.kbm_act import KBMAction
 from custom_state_setters.proximity_random_setter import ProximityRandomState
+from custom_state_setters.symmetric_setter import KickoffLikeSetter
 
 if __name__ == '__main__':  # Required for multiprocessing
     frame_skip = 8  # Number of ticks to repeat an action
     half_life_seconds = 10  # Easier to conceptualize, after this many seconds the reward discount is 0.5
-    n_instances = 4
-    team_size = 2
+    n_instances = 1
+    team_size = 3
 
     fps = 120 / frame_skip
     proportion_after = 0.1
@@ -30,8 +31,8 @@ if __name__ == '__main__':  # Required for multiprocessing
     print(f"fps={fps}, gamma={gamma})")
 
     reward_func = CombinedReward(
-        (VelocityBallToGoalReward(), EventReward(goal=10, concede=-10), KeepAwayReward(), VelocityPlayerToBallReward()),
-        (0.05, 1, 0.05, 0.01))
+        (VelocityBallToGoalReward(), EventReward(goal=10, concede=-10), VelocityPlayerToBallReward()),
+        (0.05, 1, 0.01))
 
 
     def get_match():  # Need to use a function so that each instance can call it and produce their own objects
@@ -40,9 +41,9 @@ if __name__ == '__main__':  # Required for multiprocessing
             tick_skip=frame_skip,
             reward_function=reward_func,  # Simple reward since example code
             self_play=True,
-            terminal_conditions=[TimeoutCondition(round(fps * 60)),NoTouchTimeoutCondition(round(fps * 15)), GoalScoredCondition()],  # Some basic terminals
+            terminal_conditions=[TimeoutCondition(round(fps * 5)),NoTouchTimeoutCondition(round(fps * 15)), GoalScoredCondition()],  # Some basic terminals
             obs_builder=AdvancedObs(),  # Not that advanced, good default
-            state_setter=ProximityRandomState(cars_on_ground=False, radius=750),  # Resets to kickoff position
+            state_setter=KickoffLikeSetter(ball_on_ground=False),  # Resets to kickoff position
             action_parser=KBMAction()  # Discrete > Continuous don't @ me
         )
 
@@ -57,7 +58,7 @@ if __name__ == '__main__':  # Required for multiprocessing
         MlpPolicy,
         env,
         n_epochs=32,  # PPO calls for multiple epochs
-        learning_rate=3e-4,  # Around this is fairly common for PPO
+        learning_rate=1e-4,  # Around this is fairly common for PPO
         ent_coef=0.01,  # From PPO Atari
         vf_coef=1.,  # From PPO Atari
         gamma=gamma,  # Gamma as calculated using half-life
@@ -66,7 +67,7 @@ if __name__ == '__main__':  # Required for multiprocessing
         n_steps=4096 * 8,  # Number of steps to perform before optimizing network
         tensorboard_log="out/logs",  # `tensorboard --logdir out/logs` in terminal to see graphs
         device="auto",  # Uses GPU if available
-        policy_kwargs={'net_arch': [dict(pi=[256,256,256,256,256], vf=[256,256,256,256,256])], 'optimizer_class':torch.optim.SGD}
+        policy_kwargs={'net_arch': [dict(pi=[256,256,256,256], vf=[256,256,256,256])], 'optimizer_class':torch.optim.SGD}
     )
     callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="policy", name_prefix="rl_model")
     if load_model:

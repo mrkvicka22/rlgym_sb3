@@ -75,14 +75,14 @@ def initialize_ratings(order_func, path, reset_ratings: bool = False):
 
 if __name__ == '__main__':
     model_directory = 'policy'  # choose the directory in which you store your policies
-    max_matches_to_play = 10  # how many matches do you want the evaluator to you use in order to determine the skill
+    max_matches_to_play = 200  # how many matches do you want the evaluator to you use in order to determine the skill
     best_of = 9  # how many mini-matches (first to score a goal or reach timeout) do you want to have in each match
     sigma_threshold = 1  # the threshold at which the evaluation of agent is stopped as the mmr does not move enough
     order_function = lambda x: int(x.split("_")[2])  # this is a function that orders your models based on version.
 
     # Initialize rlgym
     team_size = 2
-    max_steps = 3000
+    max_steps = 900
     no_touch_steps = 500
     env = rlgym.make(team_size=team_size, self_play=True, use_injector=True,
                      obs_builder=AdvancedObs(),
