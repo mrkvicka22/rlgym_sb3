@@ -1,7 +1,7 @@
 import numpy as np
 import torch.optim
 from rlgym.envs import Match
-from rlgym.utils.action_parsers import DiscreteAction
+from rlgym.utils.action_parsers import DiscreteAction, DefaultAction
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import VecMonitor, VecNormalize, VecCheckNan
@@ -21,7 +21,7 @@ from custom_state_setters.symmetric_setter import KickoffLikeSetter
 if __name__ == '__main__':  # Required for multiprocessing
     frame_skip = 8  # Number of ticks to repeat an action
     half_life_seconds = 10  # Easier to conceptualize, after this many seconds the reward discount is 0.5
-    n_instances = 1
+    n_instances = 4
     team_size = 3
 
     fps = 120 / frame_skip
@@ -41,7 +41,7 @@ if __name__ == '__main__':  # Required for multiprocessing
             tick_skip=frame_skip,
             reward_function=reward_func,  # Simple reward since example code
             self_play=True,
-            terminal_conditions=[TimeoutCondition(round(fps * 5)),NoTouchTimeoutCondition(round(fps * 15)), GoalScoredCondition()],  # Some basic terminals
+            terminal_conditions=[TimeoutCondition(round(fps * 60)),NoTouchTimeoutCondition(round(fps * 15)), GoalScoredCondition()],  # Some basic terminals
             obs_builder=AdvancedObs(),  # Not that advanced, good default
             state_setter=KickoffLikeSetter(ball_on_ground=False),  # Resets to kickoff position
             action_parser=KBMAction()  # Discrete > Continuous don't @ me
@@ -67,7 +67,7 @@ if __name__ == '__main__':  # Required for multiprocessing
         n_steps=4096 * 8,  # Number of steps to perform before optimizing network
         tensorboard_log="out/logs",  # `tensorboard --logdir out/logs` in terminal to see graphs
         device="auto",  # Uses GPU if available
-        policy_kwargs={'net_arch': [dict(pi=[256,256,256,256], vf=[256,256,256,256])], 'optimizer_class':torch.optim.SGD}
+        policy_kwargs={'net_arch': [dict(pi=[256,256,256,256], vf=[256,256,256,256])], 'optimizer_class':torch.optim.Adam}
     )
     callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="policy", name_prefix="rl_model")
     if load_model:

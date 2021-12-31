@@ -17,7 +17,7 @@ from rlgym.utils.action_parsers.discrete_act import DiscreteAction
 from rlgym_tools.extra_obs.advanced_stacker import AdvancedStacker
 
 # Disable cpu parallelization
-torch.set_num_threads(1)
+#torch.set_num_threads(1)
 
 # Setup TrueSkill env
 setup(draw_probability=0.01)
@@ -81,8 +81,8 @@ if __name__ == '__main__':
     order_function = lambda x: int(x.split("_")[2])  # this is a function that orders your models based on version.
 
     # Initialize rlgym
-    team_size = 2
-    max_steps = 900
+    team_size = 3
+    max_steps = 60*15*2
     no_touch_steps = 500
     env = rlgym.make(team_size=team_size, self_play=True, use_injector=True,
                      obs_builder=AdvancedObs(),
@@ -132,11 +132,7 @@ if __name__ == '__main__':
                 while not done:
                     # TODO: make this work with arbitrary agents. Not always the same agents on the same team
                     # TODO: Predict in batches instead of for loops
-                    surr_actions = []
-                    for j in range(team_size):
-                        surr_actions.append(agent.predict(obs[j])[0])
-                    for k in range(team_size):
-                        surr_actions.append(opponent.predict(obs[k + team_size])[0])
+                    surr_actions = np.concatenate([agent.predict(obs[:team_size])[0], agent.predict(obs[team_size:])[0]])
 
                     obs, reward, done, info = env.step(np.asarray(surr_actions))
 
