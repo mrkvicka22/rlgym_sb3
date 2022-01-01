@@ -29,9 +29,9 @@ class RandomSSLSetter(StateSetter):
             np.random.shuffle(self.twos_file_names)
             np.random.shuffle(self.ones_file_names)
 
-        self.threes_file_names = iter(self.threes_file_names)
-        self.twos_file_names = iter(self.twos_file_names)
-        self.ones_file_names = iter(self.ones_file_names)
+        self.threes_file_names_iter = iter(self.threes_file_names)
+        self.twos_file_names_iter = iter(self.twos_file_names)
+        self.ones_file_names_iter = iter(self.ones_file_names)
 
         self.batch = None
 
@@ -68,15 +68,20 @@ class RandomSSLSetter(StateSetter):
 
     def _load_batch(self, team_size: int):
         # handles getting the next batch for the appropriate game mode.
-        if team_size == 1:
-            batch_name = next(self.ones_file_names)
-        elif team_size == 2:
-            batch_name = next(self.twos_file_names)
-        elif team_size == 3:
-            batch_name = next(self.threes_file_names)
-        else:
-            raise NotImplementedError(
-                f"team_size other than 1,2 or 3 are not supported. However, team_size {team_size} was given.")
+        try:
+            if team_size == 1:
+                batch_name = next(self.ones_file_names_iter)
+            elif team_size == 2:
+                batch_name = next(self.twos_file_names_iter)
+            elif team_size == 3:
+                batch_name = next(self.threes_file_names_iter)
+            else:
+                raise NotImplementedError(
+                    f"team_size other than 1,2 or 3 are not supported. However, team_size {team_size} was given.")
+        except StopIteration:
+            self.threes_file_names_iter = iter(self.threes_file_names)
+            self.twos_file_names_iter = iter(self.twos_file_names)
+            self.ones_file_names_iter = iter(self.ones_file_names)
 
         with open(os.path.join(self.path_to_batches, str(team_size), batch_name), "rb") as f:
             new_batch = pickle.load(f)
