@@ -2,18 +2,17 @@ import os
 
 from rlgym.utils.state_setters import StateSetter
 from rlgym.utils.state_setters import StateWrapper
-from rlgym.utils.state_setters.wrappers import PhysicsWrapper, CarWrapper
 from rlgym.utils.gamestates.game_state import GameState
+from typing import List
 import numpy as np
 import pickle
 
 
-class RandomSSLSetter(StateSetter):
+class ReplayBasedSetter(StateSetter):
 
     def __init__(self, path_to_batches: str, shuffle_batches: bool = False):
         """
-        RandomState constructor.
-
+        ReplayBasedSetter constructor.
 
         :param path_to_batches: Path to the directory that has
         :param shuffle_batches: Boolean indicating whether to shuffle batches or go through them in alphabetical order.
@@ -44,16 +43,18 @@ class RandomSSLSetter(StateSetter):
         if not self.batch:
             self.batch = self._load_batch(len(state_wrapper.cars) // 2)
         game_state = self.batch[-1]
-        # state_wrapper.ball = PhysicsWrapper(game_state.ball)
-        # state_wrapper.cars = []
-        # for player in game_state.players:
-        #     state_wrapper.cars.append(CarWrapper(player_data=player))
 
         self._set_ball(state_wrapper, game_state)
         self._set_cars(state_wrapper, game_state)
         self.batch.pop()
 
     def _set_cars(self, state_wrapper: StateWrapper, game_state: GameState):
+        """
+        Sets the players according to the game state from replay
+
+        :param state_wrapper: StateWrapper object to be modified with desired state values.
+        :param game_state: GameState object from the replay to get data from.
+        """
         for car, player in zip(state_wrapper.cars, game_state.players):
             car.set_pos(*player.car_data.position)
             car.set_rot(pitch=player.car_data.pitch(), yaw=player.car_data.yaw(), roll=player.car_data.roll())
@@ -62,11 +63,23 @@ class RandomSSLSetter(StateSetter):
             car.boost = player.boost_amount
 
     def _set_ball(self, state_wrapper: StateWrapper, game_state: GameState):
+        """
+        Sets the ball according to the game state from replay
+
+        :param state_wrapper: StateWrapper object to be modified with desired state values.
+        :param game_state: GameState object from the replay to get data from.
+        """
         state_wrapper.ball.set_pos(*game_state.ball.position)
         state_wrapper.ball.set_ang_vel(*game_state.ball.angular_velocity)
         state_wrapper.ball.set_lin_vel(*game_state.ball.linear_velocity)
 
-    def _load_batch(self, team_size: int):
+    def _load_batch(self, team_size: int) -> List[GameState]:
+        """
+        Handles getting next batch for the appropriate game mode.
+
+        :param team_size: How many players should each team have
+        :return: List of GameStates
+        """
         # handles getting the next batch for the appropriate game mode.
         try:
             if team_size == 1:
@@ -78,7 +91,7 @@ class RandomSSLSetter(StateSetter):
             else:
                 raise NotImplementedError(
                     f"team_size other than 1,2 or 3 are not supported. However, team_size {team_size} was given.")
-        except StopIteration:
+        except StopIteration:  # this can happen if we run out of batches. Should be very rare.
             self.threes_file_names_iter = iter(self.threes_file_names)
             self.twos_file_names_iter = iter(self.twos_file_names)
             self.ones_file_names_iter = iter(self.ones_file_names)
