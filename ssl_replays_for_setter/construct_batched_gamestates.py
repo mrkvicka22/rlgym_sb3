@@ -1,3 +1,4 @@
+import os
 import pickle
 
 from rlgym_tools.replay_converter import convert_replay
@@ -14,6 +15,10 @@ def write_batch(batch: List[GameState], game_mode: str, number: int):
 
 
 if __name__ == '__main__':
+    os.mkdir("batched_gamestates")
+    os.mkdir("batched_gamestates/1")
+    os.mkdir("batched_gamestates/2")
+    os.mkdir("batched_gamestates/3")
     path_to_replays = 'replays'
     frame_skip = 15
     batch_size = 512
@@ -31,4 +36,4 @@ if __name__ == '__main__':
         for i, batch in enumerate(batches):
             write_batch(batch, game_mode, i)
             print('wrote one')
-        print(f'finished game mode {game_mode}')
+        print(f'finished game mode {game_mode}v{game_mode}')
