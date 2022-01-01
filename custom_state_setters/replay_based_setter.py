@@ -88,6 +88,9 @@ class RandomSSLSetter(StateSetter):
                 batch_name = next(self.twos_file_names_iter)
             elif team_size == 3:
                 batch_name = next(self.threes_file_names_iter)
+            else:
+                raise NotImplementedError(
+                    f"team_size other than 1,2 or 3 are not supported. However, team_size {team_size} was given.")
 
         with open(os.path.join(self.path_to_batches, str(team_size), batch_name), "rb") as f:
             new_batch = pickle.load(f)
