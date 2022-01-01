@@ -82,6 +82,12 @@ class RandomSSLSetter(StateSetter):
             self.threes_file_names_iter = iter(self.threes_file_names)
             self.twos_file_names_iter = iter(self.twos_file_names)
             self.ones_file_names_iter = iter(self.ones_file_names)
+            if team_size == 1:
+                batch_name = next(self.ones_file_names_iter)
+            elif team_size == 2:
+                batch_name = next(self.twos_file_names_iter)
+            elif team_size == 3:
+                batch_name = next(self.threes_file_names_iter)
 
         with open(os.path.join(self.path_to_batches, str(team_size), batch_name), "rb") as f:
             new_batch = pickle.load(f)
