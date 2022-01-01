@@ -58,6 +58,9 @@ def initialize_ratings(order_func, path, reset_ratings: bool = False):
     try:
         with open("policy_ratings", "rb") as f:
             ratings_database = pickle.load(f)
+        for model in get_policies(order_func, model_directory):
+            if model not in [model_item["name"] for model_item in ratings_database['agents']] and model not in [model_item["name"] for model_item in ratings_database['opponents']]:
+                ratings_database['agents'].append({"name": model, "rating": Rating()})
     except FileNotFoundError:
         ratings_database = {'agents': [], 'opponents': []}
         policies = get_policies(order_func, path)
