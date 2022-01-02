@@ -66,13 +66,13 @@ def initialize_ratings(order_func, path, reset_ratings: bool = False):
         policies = get_policies(order_func, path)
         for model in policies[1:]:
             ratings_database['agents'].append({"name": model, "rating": Rating()})
-        ratings_database['opponents'].append({"name": policies[0], "rating": Rating(sigma=0)})
+        ratings_database['opponents'].append({"name": policies[0], "rating": Rating(sigma=1e-4)})
     if reset_ratings:
         ratings_database = {'agents': [], 'opponents': []}
         policies = get_policies(order_func, path)
         for model in policies[1:]:
             ratings_database['agents'].append({"name": model, "rating": Rating()})
-        ratings_database['opponents'].append({"name": policies[0], "rating": Rating(sigma=0)})
+        ratings_database['opponents'].append({"name": policies[0], "rating": Rating(sigma=1e-4)})
     return ratings_database
 
 
