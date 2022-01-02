@@ -66,25 +66,25 @@ def initialize_ratings(order_func, path, reset_ratings: bool = False):
         policies = get_policies(order_func, path)
         for model in policies[1:]:
             ratings_database['agents'].append({"name": model, "rating": Rating()})
-        ratings_database['opponents'].append({"name": policies[0], "rating": Rating()})
+        ratings_database['opponents'].append({"name": policies[0], "rating": Rating(sigma=0)})
     if reset_ratings:
         ratings_database = {'agents': [], 'opponents': []}
         policies = get_policies(order_func, path)
         for model in policies[1:]:
             ratings_database['agents'].append({"name": model, "rating": Rating()})
-        ratings_database['opponents'].append({"name": policies[0], "rating": Rating()})
+        ratings_database['opponents'].append({"name": policies[0], "rating": Rating(sigma=0)})
     return ratings_database
 
 
 if __name__ == '__main__':
-    model_directory = 'policy'  # choose the directory in which you store your policies
+    model_directory = 'testing'  # choose the directory in which you store your policies
     max_matches_to_play = 200  # how many matches do you want the evaluator to you use in order to determine the skill
     best_of = 9  # how many mini-matches (first to score a goal or reach timeout) do you want to have in each match
     sigma_threshold = 1  # the threshold at which the evaluation of agent is stopped as the mmr does not move enough
     order_function = lambda x: int(x.split("_")[2])  # this is a function that orders your models based on version.
 
     # Initialize rlgym
-    team_size = 3
+    team_size = 1
     max_steps = 60*15*2
     no_touch_steps = 500
     env = rlgym.make(team_size=team_size, self_play=True, use_injector=True,
