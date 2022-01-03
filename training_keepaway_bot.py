@@ -17,12 +17,14 @@ from rlgym_tools.sb3_utils import SB3MultipleInstanceEnv
 from rlgym_tools.extra_action_parsers.kbm_act import KBMAction
 from custom_state_setters.proximity_random_setter import ProximityRandomState
 from custom_state_setters.symmetric_setter import KickoffLikeSetter
+from custom_state_setters.replay_based_setter import ReplayBasedSetter
+from rlgym_tools.extra_state_setters.weighted_sample_setter import WeightedSampleSetter
 
 if __name__ == '__main__':  # Required for multiprocessing
     frame_skip = 8  # Number of ticks to repeat an action
     half_life_seconds = 10  # Easier to conceptualize, after this many seconds the reward discount is 0.5
-    n_instances = 4
-    team_size = 3
+    n_instances = 6
+    team_size = 1
 
     fps = 120 / frame_skip
     proportion_after = 0.1
@@ -43,12 +45,12 @@ if __name__ == '__main__':  # Required for multiprocessing
             self_play=True,
             terminal_conditions=[TimeoutCondition(round(fps * 60)),NoTouchTimeoutCondition(round(fps * 15)), GoalScoredCondition()],  # Some basic terminals
             obs_builder=AdvancedObs(),  # Not that advanced, good default
-            state_setter=KickoffLikeSetter(ball_on_ground=False),  # Resets to kickoff position
-            action_parser=KBMAction()  # Discrete > Continuous don't @ me
+            state_setter=WeightedSampleSetter((ReplayBasedSetter(r'C:\Users\mrkva\PycharmProjects\rlgym_sb3\ssl_replays_for_setter\batched_gamestates'),ProximityRandomState(1000),KickoffLikeSetter(ball_on_ground=False)),(1,1,1)),
+            action_parser=KBMAction(),  # Discrete > Continuous don't @ me
         )
 
-    load_model = input("[L]oad/[T]rain").lower()=="l"
-    env = SB3MultipleInstanceEnv(get_match, n_instances)  # Start 2 instances, waiting 60 seconds between each
+    load_model = input("[L]oad/[T]rain").lower() == "l"
+    env = SB3MultipleInstanceEnv(get_match, n_instances, force_paging=True)  # Start 2 instances, waiting 60 seconds between each
     env = VecCheckNan(env)  # Optional
     env = VecMonitor(env)  # Recommended, logs mean reward and ep_len to Tensorboard
     env = VecNormalize(env, norm_obs=False, gamma=gamma)  # Highly recommended, normalizes rewards
@@ -71,7 +73,7 @@ if __name__ == '__main__':  # Required for multiprocessing
     )
     callback = CheckpointCallback(round(5_000_000 / env.num_envs), save_path="policy", name_prefix="rl_model")
     if load_model:
-        model = PPO.load("policy/rl_model_200000000_steps.zip", env, custom_objects=dict(n_envs=n_instances*2*team_size))
+        model = PPO.load("policy/rl_model_80000000_steps.zip", env, custom_objects=dict(n_envs=n_instances*2*team_size))
         env.reset()
         model.learn(100_000_000_000, callback=callback, reset_num_timesteps=False)
     else:
