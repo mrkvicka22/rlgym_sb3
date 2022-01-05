@@ -1,39 +1,59 @@
 import os
 import pickle
 
+import numpy as np
 from rlgym_tools.replay_converter import convert_replay
-from os import listdir
-from os.path import join
 from rlgym.utils.gamestates import GameState
 from typing import List
-from numpy.random import shuffle
 
 
-def write_batch(batch: List[GameState], game_mode: str, number: int):
-    with open(f"batched_gamestates/{game_mode}/{str(number)}.gamestate", "wb") as f:
-        pickle.dump(batch, f)
+def absolute_file_paths(directory: str):
+    for dir_path, _, filenames in os.walk(directory):
+        for f in filenames:
+            yield os.path.abspath(os.path.join(dir_path, f))
+
+
+def convert_replays(paths_to_each_replay: List[str], frame_skip: int = 150, verbose: int = 0) -> np.ndarray:
+    states = []
+    for replay in paths_to_each_replay:
+        make_state_data(replay, states, frame_skip)
+        if verbose > 0:
+            print(replay, "done")
+
+    return np.asarray(states)
+
+
+def make_state_data(replay, states, frame_skip):
+    replay_iterator = convert_replay(replay)
+    for i, value in enumerate(replay_iterator):
+        if i % frame_skip == frame_skip - 1:
+            state, _ = value
+            np_state = state_to_np_array(state)
+            states.append(np_state)
+
+
+def state_to_np_array(game_state: GameState) -> np.ndarray:
+    whole_state = []
+    ball = game_state.ball
+    ball_state = np.concatenate((ball.position, ball.linear_velocity, ball.angular_velocity))
+
+    whole_state.append(ball_state)
+    for player in game_state.players:
+        whole_state.append(np.concatenate((player.car_data.position,
+                                           player.car_data.euler_angles(),
+                                           player.car_data.linear_velocity,
+                                           player.car_data.angular_velocity,
+                                           np.asarray([player.boost_amount]))))
+    return np.concatenate(whole_state)
+
+
+def main():
+    replay_names = list(absolute_file_paths("replays/3"))
+    converted_states = convert_replays(replay_names, verbose=1)
+    print(converted_states[10])
+    with open("saved_gamestates3.gamestate", "wb") as f:
+        pickle.dump(converted_states, f)
 
 
 if __name__ == '__main__':
-    os.mkdir("batched_gamestates")
-    os.mkdir("batched_gamestates/1")
-    os.mkdir("batched_gamestates/2")
-    os.mkdir("batched_gamestates/3")
-    path_to_replays = 'replays'
-    frame_skip = 15
-    batch_size = 512
-    for game_mode in listdir(path_to_replays):
-        states = []
-        for replay in listdir(join(path_to_replays, game_mode)):
-
-            replay_iterator = convert_replay(join(path_to_replays, game_mode, replay))
-            for i, value in enumerate(replay_iterator):
-                if i % frame_skip == frame_skip - 1:
-                    state, _ = value
-                    states.append(state)
-        shuffle(states)
-        batches = [states[i:i + batch_size] for i in range(0, len(states), batch_size)]
-        for i, batch in enumerate(batches):
-            write_batch(batch, game_mode, i)
-            print('wrote one')
-        print(f'finished game mode {game_mode}v{game_mode}')
+    main()

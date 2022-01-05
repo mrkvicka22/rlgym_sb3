@@ -17,7 +17,7 @@ from rlgym.utils.action_parsers.discrete_act import DiscreteAction
 from rlgym_tools.extra_obs.advanced_stacker import AdvancedStacker
 
 # Disable cpu parallelization
-#torch.set_num_threads(1)
+# torch.set_num_threads(1)
 
 # Setup TrueSkill env
 setup(draw_probability=0.01)
@@ -59,7 +59,8 @@ def initialize_ratings(order_func, path, reset_ratings: bool = False):
         with open("policy_ratings", "rb") as f:
             ratings_database = pickle.load(f)
         for model in get_policies(order_func, model_directory):
-            if model not in [model_item["name"] for model_item in ratings_database['agents']] and model not in [model_item["name"] for model_item in ratings_database['opponents']]:
+            if model not in [model_item["name"] for model_item in ratings_database['agents']] and model not in [
+                model_item["name"] for model_item in ratings_database['opponents']]:
                 ratings_database['agents'].append({"name": model, "rating": Rating()})
     except FileNotFoundError:
         ratings_database = {'agents': [], 'opponents': []}
@@ -85,14 +86,15 @@ if __name__ == '__main__':
 
     # Initialize rlgym
     team_size = 1
-    max_steps = 60*15*2
+    max_steps = 60 * 15 * 2
     no_touch_steps = 500
     env = rlgym.make(team_size=team_size, self_play=True, use_injector=True,
                      obs_builder=AdvancedObs(),
                      state_setter=DefaultState(),
                      terminal_conditions=[TimeoutCondition(max_steps), GoalScoredCondition(),
                                           NoTouchTimeoutCondition(no_touch_steps)],
-                     action_parser=KBMAction()
+                     action_parser=KBMAction(),
+                     force_paging=True
                      )
 
     while True:
@@ -135,7 +137,8 @@ if __name__ == '__main__':
                 while not done:
                     # TODO: make this work with arbitrary agents. Not always the same agents on the same team
                     # TODO: Predict in batches instead of for loops
-                    surr_actions = np.concatenate([agent.predict(obs[:team_size])[0], agent.predict(obs[team_size:])[0]])
+                    surr_actions = np.concatenate(
+                        [agent.predict(obs[:team_size])[0], agent.predict(obs[team_size:])[0]])
 
                     obs, reward, done, info = env.step(np.asarray(surr_actions))
 
