@@ -53,7 +53,7 @@ def initialize_ratings(order_func, path, reset_ratings: bool = False):
     try:
         with open("policy_ratings", "rb") as f:
             ratings_database = pickle.load(f)
-        for model in get_policies(order_func, model_directory):
+        for model in get_policies(order_func, path):
             if model not in [model_item["name"] for model_item in ratings_database['agents']] and model not in [model_item["name"] for model_item in ratings_database['opponents']]:
                 ratings_database['agents'].append({"name": model, "rating": Rating()})
     except FileNotFoundError:
@@ -168,9 +168,9 @@ def main(model_dir: str,
 
 
 if __name__ == '__main__':
-    model_directory = 'testing'  # choose the directory in which you store your policies
+    model_directoryss = 'testing'  # choose the directory in which you store your policies
     max_matches_to_play = 200  # how many matches do you want the evaluator to you use in order to determine the skill
     best_of = 9  # how many mini-matches (first to score a goal or reach timeout) do you want to have in each match
     sigma_th = 1  # the threshold at which the evaluation of agent is stopped as the mmr does not move enough
     order_function = lambda x: int(x.split("_")[2])  # this is a function that orders your models based on version.
-    main(model_directory, order_function, action_parser=KBMAction(), sigma_threshold=2)
+    main(model_directoryss, order_function, action_parser=KBMAction(), sigma_threshold=2)
