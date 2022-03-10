@@ -15,7 +15,7 @@ from rlgym_tools.extra_action_parsers.kbm_act import KBMAction
 from rlgym.utils.action_parsers.action_parser import ActionParser
 from rlgym.utils.action_parsers.discrete_act import DiscreteAction
 
-setup(draw_probability=0.01)
+setup(mu=0,draw_probability=0.01)
 ts = global_env()
 
 
